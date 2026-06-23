@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taxa Regnskab">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#07090d">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23121620'/%3E%3Ctext x='50' y='65' font-size='55' text-anchor='middle'%3E%F0%9F%9A%95%3C/text%3E%3C/svg%3E">
+<title>Taxa Regnskab</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:#07090d;--s1:#0c0f16;--s2:#111520;--s3:#161b28;
+  --border:#1e2535;--border2:#29324a;
+  --gold:#e8b84b;--gold-glow:rgba(232,184,75,.12);--gold-ring:rgba(232,184,75,.22);
+  --red:#e05c5c;--purple:#a78bfa;--teal:#38bdf8;--green:#4ade80;--orange:#f97316;
+  --text:#dde3ee;--sub:#8896ae;--faint:#3a4459;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+  --r:10px;--rl:14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:100px;font-size:14px;line-height:1.5;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* AUTH OVERLAY */
+.auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.auth-overlay.hidden{display:none;}
+.auth-box{background:var(--s2);border:1px solid var(--border);border-radius:var(--rl);padding:36px 32px;width:100%;max-width:380px;}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+.auth-logo-icon{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#e8b84b,#c98a1a);box-shadow:0 0 22px rgba(232,184,75,.3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.auth-logo-name{font-weight:600;font-size:17px;}
+.auth-logo-sub{font-size:11px;color:var(--sub);}
+.auth-tabs{display:flex;gap:4px;margin-bottom:24px;background:var(--s3);border-radius:8px;padding:3px;}
+.auth-tab{flex:1;padding:7px;text-align:center;font-size:12.5px;font-weight:600;border-radius:6px;cursor:pointer;color:var(--sub);transition:all .18s;background:none;border:none;}
+.auth-tab.active{background:var(--s1);color:var(--text);}
+.auth-field{margin-bottom:14px;}
+.auth-field label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--sub);margin-bottom:7px;}
+.auth-field input{width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 14px;outline:none;transition:border-color .18s;}
+.auth-field input:focus{border-color:var(--gold);}
+.auth-btn{width:100%;background:linear-gradient(135deg,#e8b84b,#c98a1a);color:#07090d;font-family:var(--sans);font-size:14px;font-weight:700;padding:11px;border:none;border-radius:8px;cursor:pointer;margin-top:6px;transition:opacity .18s;}
+.auth-btn:hover{opacity:.9;}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;}
+.auth-msg{font-size:12px;margin-top:12px;text-align:center;min-height:18px;}
+.auth-msg.err{color:var(--red);}
+.auth-msg.ok{color:var(--green);}
+
+/* TOPBAR */
+.topbar{background:var(--s1);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;}
+.topbar-inner{max-width:1060px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:0 20px;height:58px;}
+.brand{display:flex;align-items:center;gap:11px;}
+.brand-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#e8b84b,#c98a1a);box-shadow:0 0 18px rgba(232,184,75,.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.brand-name{font-weight:600;font-size:15px;letter-spacing:.01em;}
+.brand-sub{font-size:11px;color:var(--sub);margin-top:1px;}
+.topbar-pill{font-family:var(--mono);font-size:11.5px;color:var(--gold);background:var(--gold-glow);border:1px solid var(--gold-ring);border-radius:20px;padding:4px 14px;white-space:nowrap;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.user-pill{font-size:11.5px;color:var(--sub);background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
+.sync-btn{background:none;border:1px solid var(--border2);border-radius:7px;color:var(--sub);font-size:11px;font-weight:500;padding:5px 11px;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.sync-btn:hover{border-color:var(--teal);color:var(--teal);}
+.sync-btn.syncing{color:var(--gold);border-color:var(--gold-ring);animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+.signout-btn{background:none;border:1px solid var(--border2);border-radius:7px;color:var(--sub);font-size:11px;font-weight:500;padding:5px 11px;cursor:pointer;transition:all .18s;}
+.signout-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* NAV TABS */
+.nav-tabs{background:var(--s1);border-bottom:1px solid var(--border);position:sticky;top:58px;z-index:190;}
+.nav-inner{max-width:1060px;margin:0 auto;padding:0 20px;display:flex;gap:0;}
+.nav-tab{font-size:12.5px;font-weight:600;color:var(--sub);padding:12px 18px;cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;background:none;border-top:none;border-left:none;border-right:none;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* LAYOUT */
+.wrap{max-width:1060px;margin:0 auto;padding:30px 20px;}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* SECTION LABEL */
+.sec{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--sub);display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* GRIDS */
+.g5{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+@media(max-width:1000px){.g5{grid-template-columns:repeat(4,1fr);}}
+@media(max-width:580px){.g5{grid-template-columns:repeat(2,1fr);}}
+.g6{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+@media(max-width:1000px){.g6{grid-template-columns:repeat(4,1fr);}}
+@media(max-width:580px){.g6{grid-template-columns:repeat(2,1fr);}}
+.mb10{margin-bottom:10px;}.mb28{margin-bottom:28px;}
+
+/* PROVISION BANNER */
+.prov-wrap{display:flex;gap:14px;align-items:stretch;margin-bottom:28px;}
+.prov-main{flex:0 0 200px;position:relative;}
+.prov-main::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--orange));border-radius:var(--r) var(--r) 0 0;}
+.prov-main .cfg{height:100%;background:var(--s2);border:1px solid var(--gold-ring);border-radius:var(--r);padding:14px 16px;}
+.prov-explain{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;font-size:12.5px;color:var(--sub);line-height:1.75;display:flex;align-items:center;}
+.prov-explain strong{color:var(--gold);}
+@media(max-width:600px){.prov-wrap{flex-direction:column;}.prov-main{flex:none;}}
+
+/* CFG */
+.cfg{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;transition:border-color .2s;}
+.cfg:focus-within{border-color:var(--gold-ring);}
+.cfg label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--sub);margin-bottom:7px;}
+.cfg-row{display:flex;align-items:baseline;gap:4px;}
+.cfg input,.cfg select{background:transparent;border:none;outline:none;color:var(--gold);font-family:var(--mono);font-size:20px;font-weight:500;width:100%;}
+.cfg select{color:var(--text);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;}
+.cfg select option{background:#1a1f2e;}
+.cfg .unit{font-size:12px;color:var(--sub);font-family:var(--mono);white-space:nowrap;}
+.cfg .hint{font-size:10px;color:var(--faint);margin-top:5px;}
+
+/* SUMMARY */
+.sum{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative;overflow:hidden;}
+.sum::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--stripe,var(--border));}
+.sum.sg{--stripe:var(--gold);}.sum.sr{--stripe:var(--red);}.sum.sp{--stripe:var(--purple);}.sum.st{--stripe:var(--teal);}.sum.sgr{--stripe:var(--green);}.sum.so{--stripe:var(--orange);}
+.sum .lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--sub);margin-bottom:9px;}
+.sum .val{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--text);}
+.sum .hint{font-size:10px;color:var(--sub);margin-top:5px;}
+
+/* TARGET */
+.tbox{margin-bottom:30px;}
+.tinner{background:var(--s2);border:1px solid var(--border);border-radius:var(--rl);padding:22px;}
+.ttop{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
+.ttop label{font-size:13px;color:var(--sub);}
+.tiw{position:relative;}
+.tiw input{background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);color:var(--gold);font-family:var(--mono);font-size:20px;font-weight:500;padding:9px 44px 9px 14px;width:170px;outline:none;transition:border-color .2s;}
+.tiw input:focus{border-color:var(--gold);}
+.tiw .unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--sub);font-family:var(--mono);}
+.tmsg{font-size:13.5px;color:var(--text);line-height:1.85;margin-bottom:16px;min-height:44px;}
+.tmsg strong{color:var(--gold);font-family:var(--mono);font-weight:500;}
+.tmsg .need{color:var(--teal);font-family:var(--mono);font-weight:600;}
+.tmsg .done{color:var(--green);font-weight:600;}
+.pmeta{display:flex;justify-content:space-between;font-size:11px;color:var(--sub);margin-bottom:6px;}
+.pbg{height:5px;background:var(--s3);border-radius:999px;overflow:hidden;border:1px solid var(--border);}
+.pfill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--teal),var(--gold));transition:width .5s cubic-bezier(.4,0,.2,1);}
+.pfill.goal-hit{background:linear-gradient(90deg,var(--green),var(--gold));box-shadow:0 0 12px rgba(74,222,128,.6);animation:goalpulse 1.4s ease-in-out infinite;}
+@keyframes goalpulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.35);}}
+
+/* PANEL */
+.panel{background:var(--s2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border);background:var(--s1);}
+.phead h2{font-size:13px;font-weight:600;color:var(--sub);}
+.phead-actions{display:flex;gap:8px;}
+.btn-ghost{background:transparent;border:1px solid var(--border2);border-radius:7px;color:var(--sub);font-family:var(--sans);font-size:11.5px;font-weight:500;padding:5px 12px;cursor:pointer;transition:all .18s;}
+.btn-ghost:hover{border-color:var(--red);color:var(--red);}
+.btn-pdf{background:transparent;border:1px solid var(--border2);border-radius:7px;color:var(--sub);font-family:var(--sans);font-size:11.5px;font-weight:500;padding:5px 12px;cursor:pointer;transition:all .18s;}
+.btn-pdf:hover{border-color:var(--teal);color:var(--teal);}
+
+/* COLUMN HEADERS */
+.col-hdr{display:grid;grid-template-columns:56px 40px 1fr;background:var(--s1);border-bottom:1px solid var(--border);padding:8px 0;}
+.ch-shifts-hdr{display:grid;grid-template-columns:86px 110px 88px 80px 80px 90px 34px;gap:2px;padding-right:18px;}
+@media(max-width:700px){.ch-shifts-hdr{grid-template-columns:82px 100px 1fr 80px;} .hch-am,.hch-prov,.hch-sk{display:none;}}
+.hch{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);text-align:right;padding:0 4px;}
+.hch:first-child{text-align:left;}
+.hch-e{width:34px;}
+.hch-date{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);padding-left:18px;}
+.hch-dow{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);padding-left:6px;}
+
+/* DAY BLOCK */
+.day-block{border-bottom:1px solid var(--border);}
+.day-block:last-child{border-bottom:none;}
+.day-block.we{background:rgba(232,184,75,.025);}
+.day-header{display:grid;grid-template-columns:56px 40px 1fr;align-items:start;min-height:44px;}
+.dh-date{font-family:var(--mono);font-size:12px;color:var(--sub);padding:12px 6px 0 18px;white-space:nowrap;}
+.dh-dow{font-size:11.5px;color:var(--sub);font-weight:500;padding:12px 4px 0;}
+.day-block.we .dh-dow{color:var(--gold);font-weight:600;}
+.shifts{padding:6px 18px 6px 0;}
+
+/* SHIFT ROW */
+.shift-row{display:grid;grid-template-columns:86px 110px 88px 80px 80px 90px 34px;align-items:center;gap:2px;padding:3px 0;}
+@media(max-width:700px){.shift-row{grid-template-columns:82px 100px 1fr 80px;} .sc-am,.sc-prov,.sc-sk{display:none;}}
+.slbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);padding:0 4px;white-space:nowrap;}
+.slbl.on{color:var(--sub);}
+.sinput{background:transparent;border:none;border-bottom:1px solid transparent;color:var(--text);font-family:var(--mono);font-size:14px;font-weight:500;padding:3px 4px;width:100%;outline:none;transition:border-color .18s;text-align:right;}
+.sinput:focus{border-bottom-color:var(--gold);}
+.sinput::placeholder{color:var(--faint);font-size:13px;font-weight:400;}
+.sc{font-family:var(--mono);font-size:12px;text-align:right;padding:0 4px;color:var(--faint);}
+.sc.cr{color:var(--red);}.sc.cp{color:var(--purple);}.sc.ct{color:var(--teal);}.sc.cg{color:var(--green);font-weight:600;}.sc.co{color:var(--orange);}
+.btn-rm{background:none;border:none;cursor:pointer;color:var(--faint);font-size:16px;line-height:1;padding:2px 4px;border-radius:4px;transition:color .15s;text-align:center;}
+.btn-rm:hover{color:var(--red);}
+.btn-add{background:none;border:1px dashed var(--border2);border-radius:6px;color:var(--sub);font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;margin:5px 0 3px;}
+.btn-add:hover{border-color:var(--gold);color:var(--gold);}
+
+/* DAY TOTAL */
+.day-total{display:flex;justify-content:flex-end;align-items:center;gap:20px;padding:3px 18px 9px 0;font-family:var(--mono);font-size:12px;border-top:1px dashed var(--border);}
+.day-total.hide{display:none;}
+.dtlbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;}
+.dtval.cg{color:var(--gold);}.dtval.cgr{color:var(--green);font-weight:600;}
+
+.week-summary{display:flex;justify-content:flex-end;gap:18px;padding:8px 18px;background:var(--s1);border-bottom:1px solid var(--border);font-size:11px;color:var(--sub);font-family:var(--mono);}
+.week-summary span:first-child{margin-right:auto;font-family:var(--sans);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:10px;color:var(--faint);}
+.ws-val{color:var(--gold);}
+.ws-val.cgr{color:var(--green);font-weight:600;}
+
+/* FOOTER */
+.pfoot{background:var(--s1);border-top:1px solid var(--border2);padding:14px 20px;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+@media(max-width:600px){.pfoot{grid-template-columns:repeat(3,1fr);}}
+.pfl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:4px;}
+.pfv{font-family:var(--mono);font-size:16px;font-weight:500;}
+.pfv.cg{color:var(--gold);}.pfv.cr{color:var(--red);}.pfv.cp{color:var(--purple);}.pfv.ct{color:var(--teal);}.pfv.cgr{color:var(--green);font-size:18px;}.pfv.co{color:var(--orange);}
+.pnote{border-top:1px solid var(--border);padding:10px 20px;font-size:11px;color:var(--sub);line-height:1.7;}
+
+/* HISTORY TAB */
+.history-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:28px;}
+.hist-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:18px;cursor:pointer;transition:border-color .18s;position:relative;overflow:hidden;}
+.hist-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);}
+.hist-card:hover{border-color:var(--gold-ring);}
+.hist-card-period{font-size:11px;color:var(--sub);margin-bottom:8px;}
+.hist-card-netto{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--green);margin-bottom:4px;}
+.hist-card-meta{font-size:11px;color:var(--sub);}
+.hist-card-meta span{color:var(--faint);}
+.hist-empty{text-align:center;padding:60px 20px;color:var(--sub);font-size:14px;}
+.hist-empty strong{display:block;font-size:16px;color:var(--text);margin-bottom:8px;}
+
+/* YEARLY TAB */
+.year-header{display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+.year-select-wrap{display:flex;align-items:center;gap:10px;}
+.year-nav-btn{background:var(--s2);border:1px solid var(--border2);border-radius:7px;color:var(--sub);font-size:16px;padding:5px 12px;cursor:pointer;transition:all .18s;}
+.year-nav-btn:hover{border-color:var(--gold);color:var(--gold);}
+.year-title{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);}
+.year-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+@media(max-width:700px){.year-stats{grid-template-columns:repeat(2,1fr);}}
+.year-months{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.month-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:border-color .18s;position:relative;overflow:hidden;}
+.month-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--stripe,var(--border));}
+.month-card.has-data::before{background:var(--green);}
+.month-card:hover{border-color:var(--gold-ring);}
+.month-card-name{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);margin-bottom:10px;}
+.month-card-netto{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--faint);}
+.month-card-netto.has-data{color:var(--green);}
+.month-card-meta{font-size:10.5px;color:var(--faint);margin-top:4px;}
+.month-bar-wrap{height:4px;background:var(--s3);border-radius:999px;margin-top:10px;overflow:hidden;position:relative;}
+.month-bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--gold));border-radius:999px;transition:width .4s;}
+.month-avg-line{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--orange);opacity:.85;}
+
+/* DAY EXTRA (km + note) */
+.day-extra{display:flex;gap:10px;align-items:center;padding:4px 18px 8px 0;margin-left:0;}
+.de-km{display:flex;align-items:center;gap:6px;flex:0 0 110px;}
+.de-km label{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+.de-input{background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 8px;outline:none;transition:border-color .18s;width:100%;}
+.de-input:focus{border-color:var(--gold);}
+.de-note{flex:1;}
+.de-note-input{font-family:var(--sans);font-size:12px;}
+.de-note-input::placeholder{color:var(--faint);}
+
+/* THEME TOGGLE */
+.theme-btn{background:none;border:1px solid var(--border2);border-radius:7px;color:var(--sub);font-size:13px;padding:5px 10px;cursor:pointer;transition:all .18s;line-height:1;}
+.theme-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* LIGHT THEME OVERRIDES */
+body.light{
+  --bg:#f4f5f8;--s1:#ffffff;--s2:#ffffff;--s3:#eef0f4;
+  --border:#e1e4eb;--border2:#cdd2dd;
+  --text:#1c2230;--sub:#5b6478;--faint:#9aa1b0;
+}
+body.light .day-block.we{background:rgba(232,184,75,.06);}
+body.light .cfg select option{background:#fff;color:#1c2230;}
+
+/* SYNC STATUS */
+.sync-status{position:fixed;bottom:20px;right:20px;background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:8px 16px;font-size:11.5px;font-weight:500;z-index:300;transition:all .3s;pointer-events:none;opacity:0;}
+.sync-status.show{opacity:1;}
+.sync-status.ok{color:var(--green);border-color:rgba(74,222,128,.3);}
+.sync-status.err{color:var(--red);border-color:rgba(224,92,92,.3);}
+.sync-status.saving{color:var(--gold);border-color:var(--gold-ring);}
+
+/* PDF EXPORT */
+@media print{
+  .topbar,.nav-tabs,.auth-overlay,.sync-status,.btn-ghost,.btn-pdf,.btn-add,.btn-rm,.pnote{display:none!important;}
+  body{background:#fff;color:#000;font-size:12px;}
+  .panel{border:1px solid #ccc;}
+  .wrap{padding:10px;}
+  .tab-pane{display:block!important;}
+  #pane-yearly,#pane-history{display:none!important;}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH OVERLAY -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🚕</div>
+      <div>
+        <div class="auth-logo-name">Taxa Regnskab</div>
+        <div class="auth-logo-sub">Log ind for at synkronisere dine data</div>
+      </div>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Log ind</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchTab('signup')">Opret konto</button>
+    </div>
+    <div id="authForm">
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="authEmail" placeholder="chauffør@example.dk" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Adgangskode</label>
+        <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="auth-btn" id="authSubmit" onclick="doAuth()">Log ind</button>
+      <div class="auth-msg" id="authMsg"></div>
+      <div style="text-align:center;margin-top:12px;">
+        <a href="#" id="forgotLink" onclick="showForgot();return false;" style="font-size:11.5px;color:var(--sub);text-decoration:underline;">Glemt adgangskode?</a>
+      </div>
+    </div>
+    <div id="forgotForm" style="display:none;">
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="forgotEmail" placeholder="chauffør@example.dk" autocomplete="email">
+      </div>
+      <button class="auth-btn" id="forgotSubmit" onclick="doForgotPassword()">Send nulstillingslink</button>
+      <div class="auth-msg" id="forgotMsg"></div>
+      <div style="text-align:center;margin-top:12px;">
+        <a href="#" onclick="hideForgot();return false;" style="font-size:11.5px;color:var(--sub);text-decoration:underline;">← Tilbage til log ind</a>
+      </div>
+    </div>
+    <div id="resetForm" style="display:none;">
+      <div class="auth-field">
+        <label>Ny adgangskode</label>
+        <input type="password" id="newPassword" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="auth-btn" id="resetSubmit" onclick="doResetPassword()">Gem ny adgangskode</button>
+      <div class="auth-msg" id="resetMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-icon">🚕</div>
+      <div><div class="brand-name">Taxa Regnskab</div><div class="brand-sub">Daglig opgørelse · Morgen &amp; aftenvagt</div></div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-pill" id="topPill">—</div>
+      <div class="user-pill" id="userPill"></div>
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Skift mørk/lys tilstand">🌙</button>
+      <button class="sync-btn" id="syncBtn" onclick="saveToCloud()">↑ Gem</button>
+      <button class="signout-btn" onclick="signOut()">Log ud</button>
+    </div>
+  </div>
+</header>
+
+<!-- NAV TABS -->
+<nav class="nav-tabs">
+  <div class="nav-inner">
+    <button class="nav-tab active" onclick="showPane('pane-month')">Denne periode</button>
+    <button class="nav-tab" onclick="showPane('pane-history')">Historik</button>
+    <button class="nav-tab" onclick="showPane('pane-yearly')">Årsoversigt</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- ═══ MONTHLY PANE ═══ -->
+  <div class="tab-pane active" id="pane-month">
+
+    <!-- PROVISION SECTION -->
+    <div class="sec mb10">Provision / Chauffør-aftale</div>
+    <div class="prov-wrap">
+      <div class="prov-main">
+        <div class="cfg" style="border-color:var(--gold-ring);">
+          <label>Din provision (andel af indkørsel)</label>
+          <div class="cfg-row"><input type="number" id="cfgProvision" value="48" min="1" max="100" step="0.5"><span class="unit">%</span></div>
+          <div class="hint">Beregnes af total omsætning</div>
+        </div>
+      </div>
+      <div class="prov-explain">
+        Taxa-indkørsel er provision-baseret. Du indtaster den <strong>fulde omsætning</strong> fra måleren, og systemet beregner automatisk din provision-andel. AM-bidrag og A-skat beregnes kun af din andel &mdash; ikke af hele indkørslen.
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="sec mb10">Indstillinger</div>
+    <div class="g5 mb28">
+      <div class="cfg">
+        <label>Periode – måned</label>
+        <select id="selMonth">
+          <option value="0">Januar</option><option value="1">Februar</option>
+          <option value="2">Marts</option><option value="3">April</option>
+          <option value="4">Maj</option><option value="5">Juni</option>
+          <option value="6">Juli</option><option value="7">August</option>
+          <option value="8">September</option><option value="9">Oktober</option>
+          <option value="10">November</option><option value="11">December</option>
+        </select>
+      </div>
+      <div class="cfg">
+        <label>År</label>
+        <div class="cfg-row"><input type="number" id="selYear" value="2025" min="2020" max="2035"></div>
+      </div>
+      <div class="cfg">
+        <label>AM-bidrag</label>
+        <div class="cfg-row"><input type="number" id="cfgAM" value="8" min="0" max="20" step="0.5"><span class="unit">%</span></div>
+      </div>
+      <div class="cfg">
+        <label>A-skat</label>
+        <div class="cfg-row"><input type="number" id="cfgSkat" value="38" min="0" max="60" step="0.5"><span class="unit">%</span></div>
+      </div>
+      <div class="cfg">
+        <label>Kontant afreg.</label>
+        <div class="cfg-row"><input type="number" id="cfgKontant" value="0" min="0" step="100"><span class="unit">kr</span></div>
+        <div class="hint">Trukket efter skat</div>
+      </div>
+      <div class="cfg">
+        <label>Periode fra dag</label>
+        <div class="cfg-row"><input type="number" id="cfgDayStart" value="16" min="1" max="28" step="1"><span class="unit">d.</span></div>
+        <div class="hint">Fx 16 eller 20</div>
+      </div>
+      <div class="cfg">
+        <label>Skattefri fradrag</label>
+        <div class="cfg-row"><input type="number" id="cfgFradrag" value="7904" min="0" max="50000" step="100"><span class="unit">kr/md</span></div>
+        <div class="hint">Reducerer A-skat</div>
+      </div>
+      <div class="cfg">
+        <label>Km-sats (fradrag)</label>
+        <div class="cfg-row"><input type="number" id="cfgKmRate" value="2.23" min="0" max="10" step="0.01"><span class="unit">kr/km</span></div>
+        <div class="hint">Tjek aktuel sats på skat.dk</div>
+      </div>
+    </div>
+
+    <!-- MONTHLY OVERVIEW -->
+    <div class="sec mb10">Månedsoversigt</div>
+    <div class="g6 mb28">
+      <div class="sum sg"><div class="lbl">Brutto omsætning</div><div class="val" id="scBrutto">0 kr</div><div class="hint" id="scDays">0 dage · 0 vagter</div></div>
+      <div class="sum st"><div class="lbl">Din provision</div><div class="val" id="scProvision">0 kr</div><div class="hint" id="scProvPct">48% af omsætning</div></div>
+      <div class="sum sr"><div class="lbl">AM-bidrag</div><div class="val" id="scAM">0 kr</div><div class="hint">Arbejdsmarkedsbidrag</div></div>
+      <div class="sum sp"><div class="lbl">A-skat</div><div class="val" id="scSkat">0 kr</div><div class="hint" id="scSpct">af grundlag</div></div>
+      <div class="sum so"><div class="lbl">Kontant afregning</div><div class="val" id="scKontant">0 kr</div><div class="hint">Trukket efter skat</div></div>
+      <div class="sum sgr"><div class="lbl">Løn udbetalt</div><div class="val" id="scNetto">0 kr</div><div class="hint">Estimeret netto</div></div>
+      <div class="sum" style="--stripe:var(--teal)"><div class="lbl">Skattefri fradrag</div><div class="val" id="scFradrag" style="color:var(--teal)">0 kr</div><div class="hint" id="scFradragHint">Sparet skat</div></div>
+      <div class="sum" style="--stripe:var(--purple)"><div class="lbl">Kørte km</div><div class="val" id="scKm" style="color:var(--purple)">0 km</div><div class="hint">I alt denne periode</div></div>
+      <div class="sum" style="--stripe:var(--orange)"><div class="lbl">Kørselsfradrag (estimat)</div><div class="val" id="scKmFradrag" style="color:var(--orange)">0 kr</div><div class="hint">Km × sats — verificér selv</div></div>
+    </div>
+
+    <!-- GOAL / TARGET -->
+    <div class="sec mb10">Lønmål</div>
+    <div class="tbox">
+      <div class="tinner">
+        <div class="ttop">
+          <label>Jeg vil have udbetalt:</label>
+          <div class="tiw">
+            <input type="number" id="targetInput" value="20000" min="0" step="500">
+            <span class="unit">kr</span>
+          </div>
+        </div>
+        <div class="tmsg" id="targetMsg">Indtast et mål for at se hvad du mangler.</div>
+        <div class="pmeta"><span>Fremskridt</span><span id="progPct">0%</span></div>
+        <div class="pbg"><div class="pfill" id="progFill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- DAILY ENTRY -->
+    <div class="sec mb10">Daglig indtastning</div>
+    <div class="panel">
+      <div class="phead">
+        <h2>Dage i perioden &nbsp;<span id="periodCount" style="font-weight:400;color:var(--faint);font-size:11px"></span></h2>
+        <div class="phead-actions">
+          <button class="btn-pdf" onclick="exportCSV()">↓ CSV</button>
+          <button class="btn-pdf" onclick="exportPDF()">↓ PDF</button>
+          <button class="btn-ghost" onclick="clearAll()">Nulstil alle</button>
+        </div>
+      </div>
+      <div class="col-hdr">
+        <div class="hch-date">Dato</div>
+        <div class="hch-dow">Dag</div>
+        <div class="ch-shifts-hdr">
+          <div class="hch" style="text-align:left">Vagt</div>
+          <div class="hch">Omsætning</div>
+          <div class="hch hch-prov">Provision</div>
+          <div class="hch hch-am">AM-bidrag</div>
+          <div class="hch hch-sk">A-skat</div>
+          <div class="hch">Netto</div>
+          <div class="hch-e"></div>
+        </div>
+      </div>
+      <div id="dayList"></div>
+      <div class="pfoot">
+        <div><div class="pfl">Brutto</div><div class="pfv cg" id="tfBrutto">—</div></div>
+        <div><div class="pfl">Provision</div><div class="pfv co" id="tfProvision">—</div></div>
+        <div><div class="pfl">AM-bidrag</div><div class="pfv cr" id="tfAM">—</div></div>
+        <div><div class="pfl">A-skat</div><div class="pfv ct" id="tfSkat">—</div></div>
+        <div><div class="pfl">Løn udbetalt</div><div class="pfv cgr" id="tfNetto">—</div></div>
+      </div>
+      <div class="pnote">
+        Tryk <strong>+ Tilføj vagt</strong> på en dag, hvor du kørte to vagter (morgen + aften). Beregning: Omsætning &rarr; Provision (<span id="noteProvPct">48</span>%) &rarr; AM-bidrag &rarr; A-skat (skattefrit fradrag fratrækkes automatisk i totalen) &rarr; Netto. Kontant afregning trækkes fra netto efter skat. Justér <strong>Periode fra dag</strong> efter din vognmands aftale (fx 16 eller 20).
+      </div>
+    </div>
+
+  </div><!-- /pane-month -->
+
+  <!-- ═══ HISTORY PANE ═══ -->
+  <div class="tab-pane" id="pane-history">
+    <div class="sec mb10">Tidligere perioder</div>
+    <div id="historyGrid" class="history-grid">
+      <div class="hist-empty"><strong>Ingen historik endnu</strong>Gem din første periode for at se den her.</div>
+    </div>
+  </div>
+
+  <!-- ═══ YEARLY PANE ═══ -->
+  <div class="tab-pane" id="pane-yearly">
+    <div class="year-header">
+      <div class="year-select-wrap">
+        <button class="year-nav-btn" onclick="yearNav(-1)">‹</button>
+        <div class="year-title" id="yearTitle">2025</div>
+        <button class="year-nav-btn" onclick="yearNav(1)">›</button>
+      </div>
+    </div>
+    <div class="year-stats" id="yearStats"></div>
+    <div class="sec mb10">Måneder</div>
+    <div class="year-months" id="yearMonths"></div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- SYNC STATUS TOAST -->
+<div class="sync-status" id="syncStatus"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://oxpagxewdvzfcozdwduh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94cGFneGV3ZHZ6ZmNvemR3ZHVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MzE2MTAsImV4cCI6MjA2NTIwNzYxMH0.z6ntaeSppEKPRFF2dCWs-8WPqtyRllXkiOqoJQmrqfE';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+const DAYS_DK=['\xd8\xf8n','Man','Tir','Ons','Tor','Fre','L\xf8r'];
+const MONS=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+const MONS_FULL=['Januar','Februar','Marts','April','Maj','Juni','Juli','August','September','Oktober','November','December'];
+const $=id=>document.getElementById(id);
+const num=id=>parseFloat($(id)?.value)||0;
+const kr=n=>Math.round(n).toLocaleString('da-DK')+' kr';
+const pad=n=>String(n).padStart(2,'0');
+const dkey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+// Normalizes a day entry to {s:[shifts...], km, note}. Handles old plain-array format for backward compatibility.
+function normDay(v){
+  if(Array.isArray(v))return{s:v,km:0,note:''};
+  if(v&&typeof v==='object')return{s:v.s||[0],km:v.km||0,note:v.note||''};
+  return{s:[0],km:0,note:''};
+}
+function normalizeState(s){
+  const out={};
+  Object.keys(s||{}).forEach(k=>{out[k]=normDay(s[k]);});
+  return out;
+}
+
+let state={};
+let currentUser=null;
+let authTab='login';
+let yearView=new Date().getFullYear();
+let allPeriods=[];
+let saveTimer=null;
+let unsavedChanges=false;
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  authTab=tab;
+  $('tabLogin').className='auth-tab'+(tab==='login'?' active':'');
+  $('tabSignup').className='auth-tab'+(tab==='signup'?' active':'');
+  $('authSubmit').textContent=tab==='login'?'Log ind':'Opret konto';
+  $('authMsg').textContent='';
+  $('authMsg').className='auth-msg';
+}
+
+async function doAuth(){
+  const email=$('authEmail').value.trim();
+  const pass=$('authPassword').value;
+  const btn=$('authSubmit');
+  if(!email||!pass){showAuthMsg('Udfyld e-mail og adgangskode.','err');return;}
+  btn.disabled=true;
+  btn.textContent='Vent…';
+  try{
+    let res;
+    if(authTab==='login'){
+      res=await sb.auth.signInWithPassword({email,password:pass});
+    }else{
+      res=await sb.auth.signUp({email,password:pass});
+      if(!res.error)showAuthMsg('Konto oprettet! Tjek din e-mail for bekræftelse.','ok');
+    }
+    if(res.error){showAuthMsg(res.error.message,'err');}
+    else if(res.data?.user){onLogin(res.data.user);}
+  }catch(e){showAuthMsg('Netværksfejl – prøv igen.','err');}
+  btn.disabled=false;
+  btn.textContent=authTab==='login'?'Log ind':'Opret konto';
+}
+
+function showAuthMsg(msg,type){
+  $('authMsg').textContent=msg;
+  $('authMsg').className='auth-msg '+(type||'');
+}
+
+// ── PASSWORD RESET ───────────────────────────────────────────────────────────
+function showForgot(){
+  $('authForm').style.display='none';
+  $('forgotForm').style.display='block';
+  $('forgotMsg').textContent='';$('forgotMsg').className='auth-msg';
+}
+function hideForgot(){
+  $('forgotForm').style.display='none';
+  $('authForm').style.display='block';
+}
+async function doForgotPassword(){
+  const email=$('forgotEmail').value.trim();
+  if(!email){showForgotMsg('Indtast din e-mail.','err');return;}
+  const btn=$('forgotSubmit');btn.disabled=true;btn.textContent='Sender…';
+  try{
+    const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+    if(error)throw error;
+    showForgotMsg('✓ Tjek din e-mail for et nulstillingslink.','ok');
+  }catch(e){
+    showForgotMsg('Fejl: '+e.message,'err');
+  }
+  btn.disabled=false;btn.textContent='Send nulstillingslink';
+}
+function showForgotMsg(msg,type){
+  $('forgotMsg').textContent=msg;
+  $('forgotMsg').className='auth-msg '+(type||'');
+}
+function showResetForm(){
+  $('authForm').style.display='none';
+  $('forgotForm').style.display='none';
+  $('resetForm').style.display='block';
+  $('authOverlay').classList.remove('hidden');
+}
+async function doResetPassword(){
+  const pass=$('newPassword').value;
+  if(!pass||pass.length<6){showResetMsg('Adgangskode skal være mindst 6 tegn.','err');return;}
+  const btn=$('resetSubmit');btn.disabled=true;btn.textContent='Gemmer…';
+  try{
+    const{error}=await sb.auth.updateUser({password:pass});
+    if(error)throw error;
+    showResetMsg('✓ Adgangskode opdateret! Du er nu logget ind.','ok');
+    setTimeout(()=>{
+      $('resetForm').style.display='none';
+      $('authForm').style.display='block';
+    },1500);
+  }catch(e){
+    showResetMsg('Fejl: '+e.message,'err');
+  }
+  btn.disabled=false;btn.textContent='Gem ny adgangskode';
+}
+function showResetMsg(msg,type){
+  $('resetMsg').textContent=msg;
+  $('resetMsg').className='auth-msg '+(type||'');
+}
+
+function onLogin(user){
+  currentUser=user;
+  $('authOverlay').classList.add('hidden');
+  $('userPill').textContent=user.email;
+  loadFromCloud().then(()=>{render();renderHistory();renderYearly();});
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+  currentUser=null;
+  state={};
+  allPeriods=[];
+  $('authOverlay').classList.remove('hidden');
+  $('userPill').textContent='';
+  $('resetForm').style.display='none';
+  $('forgotForm').style.display='none';
+  $('authForm').style.display='block';
+}
+
+// Email keypress enter
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!$('authOverlay').classList.contains('hidden'))doAuth();
+});
+
+// ── CLOUD SYNC ───────────────────────────────────────────────────────────────
+function periodKey(){
+  const m=parseInt($('selMonth').value),y=parseInt($('selYear').value);
+  return `${y}-${pad(m+1)}`;
+}
+
+async function saveToCloud(){
+  if(!currentUser)return;
+  const btn=$('syncBtn');
+  btn.className='sync-btn syncing';btn.textContent='Gemmer…';
+  showToast('Gemmer…','saving');
+  try{
+    const pk=periodKey();
+    const c=getCfgSnapshot();
+    const {error}=await sb.from('periods').upsert({
+      user_id:currentUser.id,
+      period_key:pk,
+      state_json:JSON.stringify(state),
+      cfg_json:JSON.stringify(c),
+      updated_at:new Date().toISOString()
+    },{onConflict:'user_id,period_key'});
+    if(error)throw error;
+    // Save current settings as this user's personal defaults, applied to any new period.
+    await sb.from('user_settings').upsert({
+      user_id:currentUser.id,
+      cfg_json:JSON.stringify(c),
+      updated_at:new Date().toISOString()
+    },{onConflict:'user_id'});
+    unsavedChanges=false;
+    showToast('✓ Gemt','ok');
+    await loadAllPeriods();
+    renderHistory();renderYearly();
+  }catch(e){
+    const msg=e.message||'';
+    if(msg.toLowerCase().includes('api key')||msg.toLowerCase().includes('invalid key')||msg.toLowerCase().includes('jwt')||e.status===401){
+      showToast('Fejl: Supabase API-nøgle ugyldig – log ud og ind igen','err');
+    }else{
+      showToast('Fejl: '+msg,'err');
+    }
+  }
+  btn.className='sync-btn';btn.textContent='↑ Gem';
+}
+
+function scheduleSave(){
+  unsavedChanges=true;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>saveToCloud(),2500);
+}
+
+window.addEventListener('beforeunload',e=>{
+  if(unsavedChanges){
+    e.preventDefault();
+    e.returnValue='';
+    return '';
+  }
+});
+
+window.addEventListener('online',()=>{
+  if(unsavedChanges&&currentUser){
+    showToast('Forbindelse tilbage – gemmer…','saving');
+    saveToCloud();
+  }
+});
+window.addEventListener('offline',()=>{
+  showToast('Ingen forbindelse – gemmes når du er online igen','err');
+});
+
+async function loadFromCloud(){
+  if(!currentUser)return;
+  const pk=periodKey();
+  showToast('Henter data…','saving');
+  try{
+    const{data,error}=await sb.from('periods')
+      .select('*').eq('user_id',currentUser.id).eq('period_key',pk).single();
+    if(error&&error.code!=='PGRST116')throw error;
+    if(data){
+      state=normalizeState(JSON.parse(data.state_json||'{}'));
+      const c=JSON.parse(data.cfg_json||'{}');
+      applyCfg(c);
+    }else{
+      state={};
+      await applyUserDefaults();
+    }
+    await loadAllPeriods();
+    showToast('✓ Data hentet','ok');
+  }catch(e){
+    if(e.code!=='PGRST116')showToast('Indlæsningsfejl','err');
+  }
+}
+
+// Loads this user's saved default settings (skat, AM, provision, etc.) and applies them.
+// Used for periods that have no saved data yet, so settings don't reset to hardcoded defaults.
+async function applyUserDefaults(){
+  if(!currentUser)return;
+  try{
+    const{data,error}=await sb.from('user_settings')
+      .select('*').eq('user_id',currentUser.id).single();
+    if(error&&error.code!=='PGRST116')throw error;
+    if(data){
+      const c=JSON.parse(data.cfg_json||'{}');
+      applyCfg(c);
+    }
+  }catch(e){/* no defaults saved yet — keep hardcoded defaults */}
+}
+
+async function loadAllPeriods(){
+  if(!currentUser)return;
+  const{data}=await sb.from('periods')
+    .select('*').eq('user_id',currentUser.id).order('period_key',{ascending:false});
+  allPeriods=data||[];
+}
+
+function getCfgSnapshot(){
+  return{
+    provision:num('cfgProvision'),am:num('cfgAM'),skat:num('cfgSkat'),
+    kontant:num('cfgKontant'),fradrag:num('cfgFradrag'),
+    dayStart:parseInt($('cfgDayStart')?.value)||16,
+    kmRate:num('cfgKmRate'),
+    target:parseFloat($('targetInput').value)||0
+  };
+}
+
+function applyCfg(c){
+  if(!c)return;
+  if(c.provision)$('cfgProvision').value=c.provision;
+  if(c.am)$('cfgAM').value=c.am;
+  if(c.skat)$('cfgSkat').value=c.skat;
+  if(c.kontant!==undefined)$('cfgKontant').value=c.kontant;
+  if(c.fradrag)$('cfgFradrag').value=c.fradrag;
+  if(c.dayStart)$('cfgDayStart').value=c.dayStart;
+  if(c.kmRate!==undefined)$('cfgKmRate').value=c.kmRate;
+  if(c.target!=null)$('targetInput').value=c.target;
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer=null;
+function showToast(msg,type){
+  const t=$('syncStatus');
+  t.textContent=msg;
+  t.className='sync-status show '+type;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.className='sync-status',2200);
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function showPane(id){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  $(id).classList.add('active');
+  event.target.classList.add('active');
+  if(id==='pane-history')renderHistory();
+  if(id==='pane-yearly')renderYearly();
+}
+
+// ── CALCULATIONS ─────────────────────────────────────────────────────────────
+function cfg(){
+  return{
+    provision:num('cfgProvision'),am:num('cfgAM'),skat:num('cfgSkat'),
+    kontant:num('cfgKontant'),fradrag:num('cfgFradrag'),
+    dayStart:parseInt($('cfgDayStart')?.value)||16,
+    kmRate:num('cfgKmRate')
+  };
+}
+
+function calcRow(brutto,applyFradrag=false){
+  const c=cfg();
+  const provision=brutto*(c.provision/100);
+  const am=provision*(c.am/100);
+  const grundlag=provision-am;
+  const fradragBenefit=applyFradrag?Math.min(grundlag,c.fradrag)*(c.skat/100):0;
+  const skat=Math.max(0,grundlag*(c.skat/100)-fradragBenefit);
+  const netto=grundlag-skat;
+  return{provision,am,skat,netto,fradragBenefit};
+}
+
+function getPeriod(){
+  const m=parseInt($('selMonth').value),y=parseInt($('selYear').value);
+  const c=cfg();const ds=c.dayStart;const de=ds>1?ds-1:ds;
+  const start=new Date(y,m,ds);
+  const em=m===11?0:m+1,ey=m===11?y+1:y;
+  const end=new Date(ey,em,de);
+  const dates=[];
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1))dates.push(new Date(d));
+  return{dates,start,end};
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+let shiftNames=JSON.parse(localStorage.getItem('taxaShiftNames')||'["Morgen","Aften","Ekstra"]');
+function renameShift(idx){
+  const cur=shiftNames[idx]||'Vagt '+(idx+1);
+  const v=prompt('Navngiv vagt:',cur);
+  if(v&&v.trim()){shiftNames[idx]=v.trim();localStorage.setItem('taxaShiftNames',JSON.stringify(shiftNames));render();}
+}
+
+function buildShiftRow(key,idx,val){
+  const r=calcRow(val);const a=val>0;
+  return `<div class="shift-row" data-idx="${idx}">
+    <div class="slbl ${a?'on':''}" onclick="renameShift(${idx})" style="cursor:pointer" title="Klik for at omdøbe">${shiftNames[idx]||'Vagt '+(idx+1)}</div>
+    <input class="sinput" type="number" min="0" step="50" placeholder="0,00"
+      value="${val>0?val:''}" data-key="${key}" data-idx="${idx}" oninput="onShiftInput(this)">
+    <div class="sc sc-prov ${a?'co':''}">${a?kr(r.provision):'—'}</div>
+    <div class="sc sc-am  ${a?'cr':''}">${a?kr(r.am):'—'}</div>
+    <div class="sc sc-sk  ${a?'ct':''}">${a?kr(r.skat):'—'}</div>
+    <div class="sc ${a?'cg':''}">${a?kr(r.netto):'—'}</div>
+    <div>${idx>0?`<button class="btn-rm" data-key="${key}" data-idx="${idx}" onclick="removeShift(this)">&#215;</button>`:''}</div>
+  </div>`;
+}
+
+function render(){
+  const{dates,start,end}=getPeriod();
+  $('topPill').textContent=`${start.getDate()}. ${MONS[start.getMonth()]} → ${end.getDate()}. ${MONS[end.getMonth()]} ${end.getFullYear()}`;
+  $('periodCount').textContent=`· ${dates.length} dage`;
+  const prov=num('cfgProvision');
+  $('scProvPct').textContent=prov+'% af omsætning';
+  $('noteProvPct').textContent=prov;
+
+  const list=$('dayList');list.innerHTML='';
+  let weekBrutto=0,weekNetto=0,weekDays=0;
+  dates.forEach((date,i)=>{
+    const key=dkey(date);
+    if(!state[key])state[key]={s:[0],km:0,note:''};
+    const day=state[key];
+    const dow=date.getDay(),isWE=dow===0||dow===6;
+    const shifts=day.s;
+    const totalBrutto=shifts.reduce((a,v)=>a+v,0);
+    const tr=calcRow(totalBrutto);
+    const showTotal=shifts.length>1&&totalBrutto>0;
+    let shiftsHTML=shifts.map((v,i)=>buildShiftRow(key,i,v)).join('');
+    const canAdd=shifts.length<3;
+    const block=document.createElement('div');
+    block.className='day-block'+(isWE?' we':'');
+    block.dataset.key=key;
+    block.innerHTML=`
+      <div class="day-header">
+        <div class="dh-date">${date.getDate()}.${pad(date.getMonth()+1)}</div>
+        <div class="dh-dow">${DAYS_DK[dow]}</div>
+        <div class="shifts">
+          ${shiftsHTML}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${canAdd?`<button class="btn-add" data-key="${key}" onclick="addShift(this)">+ Tilføj vagt</button>`:''}
+            <button class="btn-add" data-key="${key}" onclick="copyYesterday(this)" title="Kopiér gårsdagens omsætning">↻ Kopiér i går</button>
+          </div>
+        </div>
+      </div>
+      <div class="day-extra">
+        <div class="de-km"><label>Km</label><input class="de-input" type="number" min="0" step="1" placeholder="0" value="${day.km>0?day.km:''}" data-key="${key}" oninput="onKmInput(this)"></div>
+        <div class="de-note"><input class="de-input de-note-input" type="text" placeholder="Note (fx 'bil i værksted')" value="${day.note?day.note.replace(/"/g,'&quot;'):''}" data-key="${key}" oninput="onNoteInput(this)"></div>
+      </div>
+      <div class="day-total ${showTotal?'':'hide'}">
+        <div><span class="dtlbl">Dag total </span><span class="dtval cg">${kr(totalBrutto)}</span></div>
+        <div><span class="dtlbl">Netto </span><span class="dtval cgr">${kr(tr.netto)}</span></div>
+      </div>`;
+    list.appendChild(block);
+
+    if(totalBrutto>0){weekBrutto+=totalBrutto;weekNetto+=tr.netto;weekDays++;}
+    const isLast=i===dates.length-1;
+    if(dow===0||isLast){
+      if(weekDays>0){
+        const wk=document.createElement('div');
+        wk.className='week-summary';
+        wk.innerHTML=`<span>Uge-total</span><span>${weekDays} dag${weekDays!==1?'e':''}</span><span class="ws-val">${kr(weekBrutto)} brutto</span><span class="ws-val cgr">${kr(weekNetto)} netto</span>`;
+        list.appendChild(wk);
+      }
+      weekBrutto=0;weekNetto=0;weekDays=0;
+    }
+  });
+  updateTotals();
+}
+
+function onShiftInput(el){
+  const key=el.dataset.key,idx=parseInt(el.dataset.idx);
+  const val=parseFloat(el.value)||0;
+  state[key].s[idx]=val;
+  const row=el.closest('.shift-row');
+  const r=calcRow(val);const a=val>0;
+  const lbl=row.querySelector('.slbl');
+  if(lbl)lbl.className='slbl'+(a?' on':'');
+  const data=[r.provision,r.am,r.skat,r.netto];
+  const cls=['co','cr','ct','cg'];
+  row.querySelectorAll('.sc').forEach((c,i)=>{
+    c.className='sc '+['sc-prov','sc-am','sc-sk',''][i]+(a?' '+cls[i]:'');
+    c.textContent=a?kr(data[i]):'—';
+  });
+  const block=el.closest('.day-block');
+  refreshDayTotal(block,key);
+  updateTotals();
+  scheduleSave();
+}
+
+function onKmInput(el){
+  const key=el.dataset.key;
+  state[key].km=parseFloat(el.value)||0;
+  updateTotals();
+  scheduleSave();
+}
+
+function onNoteInput(el){
+  const key=el.dataset.key;
+  state[key].note=el.value;
+  scheduleSave();
+}
+
+function refreshDayTotal(block,key){
+  const shifts=state[key].s;
+  const totalBrutto=shifts.reduce((a,v)=>a+v,0);
+  const r=calcRow(totalBrutto);
+  const showTotal=shifts.length>1&&totalBrutto>0;
+  const dt=block.querySelector('.day-total');
+  if(dt){
+    dt.className='day-total'+(showTotal?'':' hide');
+    const vs=dt.querySelectorAll('.dtval');
+    if(vs.length>=2){vs[0].textContent=kr(totalBrutto);vs[1].textContent=kr(r.netto);}
+  }
+}
+
+function addShift(btn){
+  const key=btn.dataset.key;
+  state[key].s.push(0);render();
+  setTimeout(()=>{
+    const b=document.querySelector(`.day-block[data-key="${key}"]`);
+    if(b){const ins=b.querySelectorAll('.sinput');if(ins.length)ins[ins.length-1].focus();}
+  },30);
+}
+
+function removeShift(btn){
+  const key=btn.dataset.key,idx=parseInt(btn.dataset.idx);
+  state[key].s.splice(idx,1);
+  if(!state[key].s.length)state[key].s=[0];
+  render();
+}
+
+function copyYesterday(btn){
+  const key=btn.dataset.key;
+  const[y,m,d]=key.split('-').map(Number);
+  const yest=new Date(y,m-1,d-1);
+  const yKey=dkey(yest);
+  const yDay=state[yKey];
+  if(!yDay||!yDay.s.some(v=>v>0)){showToast('Ingen data i går','err');return;}
+  state[key]={s:[...yDay.s],km:yDay.km||0,note:yDay.note||''};
+  render();scheduleSave();
+}
+
+function updateTotals(){
+  const{dates}=getPeriod();const c=cfg();
+  let brutto=0,days=0,vagter=0,totalKm=0;
+  dates.forEach(d=>{
+    const k=dkey(d);const day=state[k]||{s:[0],km:0,note:''};
+    const shifts=day.s;
+    const dt=shifts.reduce((a,v)=>a+v,0);
+    if(dt>0){brutto+=dt;days++;vagter+=shifts.filter(v=>v>0).length;}
+    totalKm+=day.km||0;
+  });
+  const r=calcRow(brutto,true);
+  const nettoFinal=r.netto-c.kontant;
+  const kmFradrag=totalKm*(c.kmRate||0);
+  $('scBrutto').textContent=kr(brutto);
+  $('scDays').textContent=`${days} dag${days!==1?'e':''} · ${vagter} vagt${vagter!==1?'er':''}`;
+  $('scProvision').textContent=kr(r.provision);
+  $('scProvPct').textContent=c.provision+'% af omsætning';
+  $('scAM').textContent=kr(r.am);
+  $('scSkat').textContent=kr(r.skat);
+  $('scSpct').textContent=c.skat+'% af grundlag';
+  $('scKontant').textContent=kr(c.kontant);
+  $('scNetto').textContent=kr(nettoFinal);
+  $('scFradrag').textContent=kr(r.fradragBenefit);
+  $('scFradragHint').textContent=`Sparet skat (${kr(c.fradrag)} fradrag)`;
+  $('scKm').textContent=`${Math.round(totalKm).toLocaleString('da-DK')} km`;
+  $('scKmFradrag').textContent=kr(kmFradrag);
+  $('tfBrutto').textContent=kr(brutto);
+  $('tfProvision').textContent=kr(r.provision);
+  $('tfAM').textContent=kr(r.am);
+  $('tfSkat').textContent=kr(r.skat);
+  $('tfNetto').textContent=kr(nettoFinal);
+  updateTarget(brutto,nettoFinal,days);
+}
+
+function updateTarget(brutto,nettoFinal,days){
+  const targetStr=$('targetInput').value;
+  const target=targetStr===''?0:parseFloat(targetStr)||0;
+  if(!target){
+    $('targetMsg').innerHTML='Indtast et mål for at se hvad du mangler.';
+    $('progPct').textContent='0%';
+    $('progFill').style.width='0%';
+    $('progFill').classList.remove('goal-hit');
+    return;
+  }
+  const pct=Math.min(100,(nettoFinal/target)*100);
+  const pctDisplay=Math.round(pct);
+  $('progPct').textContent=pctDisplay+'%';
+  $('progFill').style.width=pct+'%';
+  const hit=nettoFinal>=target;
+  $('progFill').classList.toggle('goal-hit',hit);
+  if(hit){
+    $('targetMsg').innerHTML=`<span class="done">✓ Mål nået!</span> Estimeret <strong>${kr(nettoFinal)}</strong> udbetalt &mdash; <strong>${kr(nettoFinal-target)}</strong> over dit mål på <strong>${kr(target)}</strong>.`;
+    return;
+  }
+  const c=cfg();
+  const nf=(c.provision/100)*(1-c.am/100)*(1-c.skat/100);
+  const en=target-nettoFinal;const eb=nf>0?en/nf:0;
+  let msg=`Du mangler <span class="need">${kr(en)}</span> netto for at nå <strong>${kr(target)}</strong>.<br>`;
+  msg+=`Det kræver yderligere <strong>${kr(eb)}</strong> i brutto omsætning.`;
+  if(days>0&&brutto>0){
+    const avg=brutto/days,dl=avg>0?Math.ceil(eb/avg):'?';
+    msg+=`<br>Med din dagsgns. på <strong>${kr(avg)}</strong> mangler du ca. <strong>${dl} dag${dl!==1?'e':''}</strong> mere.`;
+  }
+  $('targetMsg').innerHTML=msg;
+}
+
+function clearAll(){
+  if(!confirm('Nulstil alle vagter i denne periode?'))return;
+  state={};render();scheduleSave();
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+function calcPeriodNetto(stateData, cfgData){
+  const c=cfgData||{provision:48,am:8,skat:38,kontant:0,fradrag:7904};
+  let brutto=0;
+  Object.values(stateData||{}).forEach(d=>{
+    normDay(d).s.forEach(v=>{brutto+=v||0;});
+  });
+  const provision=brutto*(c.provision/100);
+  const am=provision*(c.am/100);
+  const grundlag=provision-am;
+  const fradragB=Math.min(grundlag,c.fradrag||0)*(c.skat/100);
+  const skat=Math.max(0,grundlag*(c.skat/100)-fradragB);
+  return{brutto,netto:grundlag-skat-(c.kontant||0)};
+}
+
+function renderHistory(){
+  const grid=$('historyGrid');
+  if(!allPeriods.length){
+    grid.innerHTML='<div class="hist-empty"><strong>Ingen historik endnu</strong>Gem din første periode for at se den her.</div>';
+    return;
+  }
+  grid.innerHTML=allPeriods.map(p=>{
+    const st=JSON.parse(p.state_json||'{}');
+    const cf=JSON.parse(p.cfg_json||'{}');
+    const{brutto,netto}=calcPeriodNetto(st,cf);
+    const days=Object.values(st).filter(d=>normDay(d).s.reduce((a,v)=>a+v,0)>0).length;
+    const pk=p.period_key;
+    const [py,pm]=pk.split('-');
+    const mName=MONS_FULL[parseInt(pm)-1];
+    return `<div class="hist-card" onclick="loadPeriod('${pk}')">
+      <div class="hist-card-period">${mName} ${py}</div>
+      <div class="hist-card-netto">${kr(netto)}</div>
+      <div class="hist-card-meta">${days} arbejdsdage · Brutto ${kr(brutto)}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadPeriod(pk){
+  if(!currentUser)return;
+  const{data}=await sb.from('periods').select('*').eq('user_id',currentUser.id).eq('period_key',pk).single();
+  if(!data)return;
+  const[py,pm]=pk.split('-');
+  $('selYear').value=py;
+  $('selMonth').value=parseInt(pm)-1;
+  state=normalizeState(JSON.parse(data.state_json||'{}'));
+  applyCfg(JSON.parse(data.cfg_json||'{}'));
+  render();
+  showPane('pane-month');
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>{if(i===0)t.classList.add('active');else t.classList.remove('active');});
+}
+
+// ── YEARLY ────────────────────────────────────────────────────────────────────
+function yearNav(d){yearView+=d;renderYearly();}
+
+function renderYearly(){
+  $('yearTitle').textContent=yearView;
+  const yearPeriods=allPeriods.filter(p=>p.period_key.startsWith(yearView+'-'));
+  let totalBrutto=0,totalNetto=0,totalDays=0;
+  const monthData=Array(12).fill(null).map((_,i)=>{
+    const pk=`${yearView}-${pad(i+1)}`;
+    const p=yearPeriods.find(x=>x.period_key===pk);
+    if(!p)return{pk,brutto:0,netto:0,days:0,has:false};
+    const st=JSON.parse(p.state_json||'{}');
+    const cf=JSON.parse(p.cfg_json||'{}');
+    const{brutto,netto}=calcPeriodNetto(st,cf);
+    const days=Object.values(st).filter(d=>normDay(d).s.reduce((a,v)=>a+v,0)>0).length;
+    totalBrutto+=brutto;totalNetto+=netto;totalDays+=days;
+    return{pk,brutto,netto,days,has:brutto>0};
+  });
+
+  const maxNetto=Math.max(...monthData.map(m=>m.netto),1);
+  const monthsWithData=monthData.filter(m=>m.has);
+  const avgNetto=monthsWithData.length?monthsWithData.reduce((a,m)=>a+m.netto,0)/monthsWithData.length:0;
+  const avgPct=Math.min(100,(avgNetto/maxNetto*100)).toFixed(1);
+
+  $('yearStats').innerHTML=`
+    <div class="sum sg"><div class="lbl">Årsbrutto</div><div class="val">${kr(totalBrutto)}</div><div class="hint">${yearView}</div></div>
+    <div class="sum sgr"><div class="lbl">Årsløn udbetalt</div><div class="val" style="color:var(--green)">${kr(totalNetto)}</div><div class="hint">Estimeret netto</div></div>
+    <div class="sum st"><div class="lbl">Arbejdsdage</div><div class="val" style="color:var(--teal)">${totalDays}</div><div class="hint">dage registreret</div></div>
+    <div class="sum so"><div class="lbl">Gns. pr. dag</div><div class="val" style="color:var(--orange)">${totalDays?kr(totalNetto/totalDays):'— kr'}</div><div class="hint">netto per dag</div></div>
+  `;
+
+  $('yearMonths').innerHTML=monthData.map((m,i)=>`
+    <div class="month-card ${m.has?'has-data':''}" onclick="loadPeriod('${m.pk}')">
+      <div class="month-card-name">${MONS_FULL[i]}</div>
+      <div class="month-card-netto ${m.has?'has-data':''}">${m.has?kr(m.netto):'Ingen data'}</div>
+      <div class="month-card-meta">${m.has?`${m.days} dage · ${kr(m.brutto)} brutto`:''}</div>
+      <div class="month-bar-wrap" title="Gns. måned: ${kr(avgNetto)}">
+        <div class="month-bar" style="width:${m.has?(m.netto/maxNetto*100).toFixed(1):0}%"></div>
+        ${monthsWithData.length?`<div class="month-avg-line" style="left:${avgPct}%"></div>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── PDF EXPORT ────────────────────────────────────────────────────────────────
+function exportPDF(){window.print();}
+
+function exportCSV(){
+  const{dates,start,end}=getPeriod();
+  const c=cfg();
+  const pk=periodKey();
+  const[py,pm]=pk.split('-');
+  const mName=MONS_FULL[parseInt(pm)-1];
+
+  // Collect all active day data
+  let totalBrutto=0,totalProv=0,totalAM=0,totalSkat=0,totalNetto=0,totalKm=0,activeDays=0,totalVagter=0;
+  const dataRows=[];
+  dates.forEach(date=>{
+    const key=dkey(date);
+    const day=state[key]||{s:[0],km:0,note:''};
+    const dow=DAYS_DK[date.getDay()];
+    const dateStr=`${pad(date.getDate())}.${pad(date.getMonth()+1)}.${date.getFullYear()}`;
+    const dayTotal=day.s.reduce((a,v)=>a+v,0);
+    if(dayTotal<=0)return; // skip empty days
+    activeDays++;
+    let dayFirstRow=true;
+    day.s.forEach((v,i)=>{
+      if(v<=0)return;
+      const r=calcRow(v);
+      totalVagter++;
+      dataRows.push([
+        dateStr,
+        dow,
+        shiftNames[i]||('Vagt '+(i+1)),
+        v,
+        Math.round(r.provision),
+        Math.round(r.am),
+        Math.round(r.skat),
+        Math.round(r.netto),
+        dayFirstRow?(day.km||0):'',
+        dayFirstRow?(day.note||''):''
+      ]);
+      totalBrutto+=v;
+      totalProv+=r.provision;
+      totalAM+=r.am;
+      totalSkat+=r.skat;
+      totalNetto+=r.netto;
+      dayFirstRow=false;
+    });
+    totalKm+=day.km||0;
+  });
+
+  const nettoAfterKontant=totalNetto-c.kontant;
+  const fradragRow=calcRow(totalBrutto,true);
+  const finalNetto=fradragRow.netto-c.kontant;
+
+  const esc=v=>{const s=String(v??'');return/[",;\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const row=(...cols)=>cols.map(esc).join(';');
+
+  const lines=[];
+
+  // ── SUMMARY HEADER ──
+  lines.push(row('TAXA REGNSKAB – EKSPORT'));
+  lines.push(row('Periode:',`${mName} ${py}`));
+  lines.push(row('Periode-interval:',`${pad(start.getDate())}.${pad(start.getMonth()+1)}.${start.getFullYear()} – ${pad(end.getDate())}.${pad(end.getMonth()+1)}.${end.getFullYear()}`));
+  lines.push(row('Eksporteret:',new Date().toLocaleDateString('da-DK')));
+  lines.push(row(''));
+
+  // ── SETTINGS USED ──
+  lines.push(row('INDSTILLINGER'));
+  lines.push(row('Provision-andel:',c.provision+'%'));
+  lines.push(row('AM-bidrag:',c.am+'%'));
+  lines.push(row('A-skat:',c.skat+'%'));
+  lines.push(row('Skattefri fradrag:',Math.round(c.fradrag)+' kr/md'));
+  lines.push(row('Kontant afregning:',Math.round(c.kontant)+' kr'));
+  lines.push(row('Km-sats:',c.kmRate+' kr/km'));
+  lines.push(row(''));
+
+  // ── TOTALS SUMMARY ──
+  lines.push(row('OPSUMMERING'));
+  lines.push(row('Arbejdsdage:',activeDays));
+  lines.push(row('Antal vagter:',totalVagter));
+  lines.push(row('Brutto omsætning:',Math.round(totalBrutto)+' kr'));
+  lines.push(row('Din provision ('+c.provision+'%):',Math.round(totalProv)+' kr'));
+  lines.push(row('AM-bidrag ('+c.am+'%):',Math.round(totalAM)+' kr'));
+  lines.push(row('A-skat ('+c.skat+'%):',Math.round(totalSkat)+' kr'));
+  lines.push(row('Sparet skat (fradrag):',Math.round(fradragRow.fradragBenefit)+' kr'));
+  lines.push(row('Kontant afregning:',Math.round(c.kontant)+' kr'));
+  lines.push(row('LØN UDBETALT (NETTO):',Math.round(finalNetto)+' kr'));
+  lines.push(row('Kørte km:',Math.round(totalKm)+' km'));
+  lines.push(row('Kørselsfradrag (estimat):',Math.round(totalKm*c.kmRate)+' kr'));
+  lines.push(row(''));
+
+  // ── DAY-BY-DAY DATA ──
+  lines.push(row('DAGLIG DATA'));
+  lines.push(row('Dato','Dag','Vagt','Omsætning (kr)','Provision (kr)','AM-bidrag (kr)','A-skat (kr)','Netto (kr)','Km','Note'));
+
+  dataRows.forEach(r=>lines.push(r.map(esc).join(';')));
+
+  // Totals footer row
+  lines.push(row(''));
+  lines.push(row('TOTAL','','',Math.round(totalBrutto),Math.round(totalProv),Math.round(totalAM),Math.round(totalSkat),Math.round(finalNetto),Math.round(totalKm),''));
+
+  const csv=lines.join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`taxa-regnskab-${pk}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── THEME ─────────────────────────────────────────────────────────────────────
+function applyTheme(){
+  const t=localStorage.getItem('taxaTheme')||'dark';
+  document.body.classList.toggle('light',t==='light');
+  const btn=$('themeBtn');
+  if(btn)btn.textContent=t==='light'?'☀️':'🌙';
+}
+function toggleTheme(){
+  const isLight=document.body.classList.contains('light');
+  localStorage.setItem('taxaTheme',isLight?'dark':'light');
+  applyTheme();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init(){
+  applyTheme();
+  const now=new Date();
+  let m=now.getMonth(),y=now.getFullYear();
+  const ds=parseInt($('cfgDayStart').value)||16;
+  if(now.getDate()<ds){m=m===0?11:m-1;if(m===11)y--;}
+  $('selMonth').value=m;$('selYear').value=y;
+  $('targetInput').value=20000;
+  render();
+}
+
+['selMonth','selYear'].forEach(id=>$(id).addEventListener('change',()=>{
+  state={};loadFromCloud().then(()=>{render();});
+}));
+['cfgProvision','cfgAM','cfgSkat','cfgKontant','cfgDayStart','cfgFradrag','cfgKmRate'].forEach(id=>
+  $(id).addEventListener('input',()=>{render();scheduleSave();}));
+$('targetInput').addEventListener('input',()=>{updateTotals();scheduleSave();});
+
+// ── SUPABASE AUTH LISTENER ────────────────────────────────────────────────────
+applyTheme();
+sb.auth.getSession().then(({data:{session}})=>{
+  if(session?.user){onLogin(session.user);}
+  else{init();}
+});
+sb.auth.onAuthStateChange((_event,session)=>{
+  if(_event==='PASSWORD_RECOVERY'){showResetForm();return;}
+  if(session?.user&&!currentUser)onLogin(session.user);
+});
+</script>
+</body>
+</html>
